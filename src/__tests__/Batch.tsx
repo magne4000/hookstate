@@ -18,8 +18,8 @@ test('object: should rerender used via nested batch update', async () => {
 
     act(() => {
         result.current.batch(() => {
-            result.current.field1.set(p => p + 1);
-            result.current.field2.set(p => p + 'str');
+            result.current.field1.produce(p => p + 1);
+            result.current.field2.produce(p => p + 'str');
         }, null)
     });
     expect(renderTimes).toStrictEqual(2);
@@ -44,10 +44,10 @@ test('object: should rerender used via nested batch merge', async () => {
 
     act(() => {
         result.current.batch(() => {
-            result.current.merge(p => ({
-                field1: p.field1 + 1,
-                field2: p.field2 + 'str',
-            }))
+            result.current.produce(p => {
+                p.field1 += 1;
+                p.field2 += 'str';
+            })
         }, null)
     });
     expect(renderTimes).toStrictEqual(2);
@@ -73,14 +73,14 @@ test('object: should rerender used via nested batch double', async () => {
     act(() => {
         result.current.batch(() => {
             // nested batch
-            result.current.field2.set(p => p + '-before-')
+            result.current.field2.produce(p => p + '-before-')
             result.current.batch((s) => {
-                s.merge(p => ({
-                    field1: p.field1 + 1,
-                    field2: p.field2 + 'str',
-                }))
+                s.produce(p => {
+                    p.field1 += 1;
+                    p.field2 += 'str';
+                })
             })
-            result.current.field2.set(p => p + '-after-')
+            result.current.field2.produce(p => p + '-after-')
         })
     });
     expect(renderTimes).toStrictEqual(2);
@@ -103,7 +103,7 @@ test('object: should rerender used via nested batch promised', async () => {
         act(() => resolve(100))
     }, 500))
     act(() => {
-        result.current.set(promise);
+        result.current.produce(() => promise);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.promised).toStrictEqual(true);
@@ -112,7 +112,7 @@ test('object: should rerender used via nested batch promised', async () => {
     expect(() => result.current.get())
         .toThrow('Error: HOOKSTATE-103 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-103');
 
-    expect(() => result.current.set(200))
+    expect(() => result.current.produce(() => 200))
         .toThrow('Error: HOOKSTATE-104 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-104')
 
     let executed = false;
@@ -121,7 +121,7 @@ test('object: should rerender used via nested batch promised', async () => {
             executed = true;
             result.current.get()
             expect(renderTimes).toStrictEqual(2);
-            result.current.set(10000)
+            result.current.produce(() => 10000)
             expect(renderTimes).toStrictEqual(2);
         })).toThrow(`Error: HOOKSTATE-103 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-103`)
     })
@@ -131,7 +131,7 @@ test('object: should rerender used via nested batch promised', async () => {
         expect(() => result.current.batch(() => {
             executed = true;
             expect(renderTimes).toStrictEqual(2);
-            result.current.set(10000)
+            result.current.produce(() => 10000)
             expect(renderTimes).toStrictEqual(2);
         })).toThrow(`Error: HOOKSTATE-104 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-104`)
     })
@@ -142,7 +142,7 @@ test('object: should rerender used via nested batch promised', async () => {
         expect(() => result.current.batch(() => {
             executed = true;
             expect(renderTimes).toStrictEqual(2);
-            result.current.set(10000)
+            result.current.produce(() => 10000)
         }, null)).toThrow(`Error: HOOKSTATE-104 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-104`)
     })
     expect(executed).toBeTruthy()
@@ -155,9 +155,9 @@ test('object: should rerender used via nested batch promised', async () => {
             }
             executed = true;
             expect(renderTimes).toStrictEqual(2);
-            result.current.set(p => p + 100)
+            result.current.produce(p => p + 100)
             expect(renderTimes).toStrictEqual(2);
-            result.current.set(p => p + 100)
+            result.current.produce(p => p + 100)
             expect(renderTimes).toStrictEqual(2);
         });
     })
@@ -172,9 +172,9 @@ test('object: should rerender used via nested batch promised', async () => {
             return act(() => {
                 executed = true
                 expect(renderTimes).toStrictEqual(3);
-                result.current.set(p => p + 100)
+                result.current.produce(p => p + 100)
                 expect(renderTimes).toStrictEqual(3);
-                result.current.set(p => p + 100)
+                result.current.produce(p => p + 100)
                 expect(renderTimes).toStrictEqual(3);
             })
         });
@@ -218,9 +218,9 @@ test('object: should rerender used via nested batch promised manual', async () =
             }
             return act(() => {
                 expect(renderTimes).toStrictEqual(2);
-                result.current.set(p => p + 100)
+                result.current.produce(p => p + 100)
                 expect(renderTimes).toStrictEqual(2);
-                result.current.set(p => p + 100)
+                result.current.produce(p => p + 100)
                 expect(renderTimes).toStrictEqual(2);
             })
         });
@@ -228,7 +228,7 @@ test('object: should rerender used via nested batch promised manual', async () =
 
     expect(renderTimes).toStrictEqual(1);
     act(() => {
-        result.current.set(100)
+        result.current.produce(() => 100, true)
     })
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.get()).toEqual(100); // mark used
@@ -265,8 +265,8 @@ test('object: should rerender used via scoped batched updates', async () => {
 
     act(() => {
         child.result.current.batch(() => {
-            child.result.current.fieldUsedByChild.set(p => p + 1);
-            child.result.current.fieldUsedByChild.set(p => p + 1);
+            child.result.current.fieldUsedByChild.produce(p => p + 1);
+            child.result.current.fieldUsedByChild.produce(p => p + 1);
         }, 'batched')
     });
     expect(parent.result.current.fieldUsedByParent.get()).toStrictEqual(0);
@@ -278,10 +278,10 @@ test('object: should rerender used via scoped batched updates', async () => {
 
     act(() => {
         child.result.current.batch(() => {
-            child.result.current.fieldUsedByChild.set(p => p + 1);
-            child.result.current.fieldUsedByChild.set(p => p + 1);
-            child.result.current.fieldUsedByParent.set(p => p + 1);
-            child.result.current.fieldUsedByParent.set(p => p + 1);
+            child.result.current.fieldUsedByChild.produce(p => p + 1);
+            child.result.current.fieldUsedByChild.produce(p => p + 1);
+            child.result.current.fieldUsedByParent.produce(p => p + 1);
+            child.result.current.fieldUsedByParent.produce(p => p + 1);
         }, 0)
     });
     expect(parent.result.current.fieldUsedByParent.get()).toStrictEqual(2);

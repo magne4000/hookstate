@@ -16,7 +16,7 @@ test('primitive: should rerender used on promise resolve', async () => {
         act(() => resolve(100))
     }, 500))
     act(() => {
-        result.current.set(promise);
+        result.current.produce(() => promise);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.promised).toStrictEqual(true);
@@ -25,9 +25,9 @@ test('primitive: should rerender used on promise resolve', async () => {
     expect(() => result.current.get())
         .toThrow('Error: HOOKSTATE-103 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-103');
 
-    expect(() => result.current.set(200))
+    expect(() => result.current.produce(() => 200))
         .toThrow('Error: HOOKSTATE-104 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-104')
-        
+
     await act(async () => {
         await promise;
     })
@@ -50,7 +50,7 @@ test('array: should rerender used on promise resolve', async () => {
         act(() => resolve([100]))
     }, 500))
     act(() => {
-        result.current.set(promise);
+        result.current.produce(() => promise);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.promised).toStrictEqual(true);
@@ -59,9 +59,9 @@ test('array: should rerender used on promise resolve', async () => {
     expect(() => result.current.get())
         .toThrow('Error: HOOKSTATE-103 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-103');
 
-    expect(() => result.current.set([200]))
+    expect(() => result.current.produce(() => [200]))
         .toThrow('Error: HOOKSTATE-104 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-104')
-        
+
     await act(async () => {
         await promise;
     })
@@ -84,7 +84,7 @@ test('array: should rerender used on promise resolve (global)', async () => {
         act(() => resolve([100]))
     }, 500))
     act(() => {
-        result.current.set(promise);
+        result.current.produce(() => promise);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.promised).toStrictEqual(true);
@@ -93,9 +93,9 @@ test('array: should rerender used on promise resolve (global)', async () => {
     expect(() => result.current.get())
         .toThrow('Error: HOOKSTATE-103 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-103');
 
-    expect(() => result.current.set([200]))
+    expect(() => result.current.produce(() => [200]))
         .toThrow('Error: HOOKSTATE-104 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-104')
-        
+
     await act(async () => {
         await promise;
     })
@@ -121,7 +121,7 @@ test('array: should rerender used on promise resolve (global promise)', async ()
     expect(() => result.current.get())
         .toThrow('Error: HOOKSTATE-103 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-103');
 
-    expect(() => result.current.set([200]))
+    expect(() => result.current.produce(() => [200]))
         .toThrow('Error: HOOKSTATE-104 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-104')
 });
 
@@ -139,7 +139,7 @@ test('primitive: should rerender used on promise resolve manual', async () => {
         .toThrow('Error: HOOKSTATE-103 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-103');
 
     act(() => {
-        result.current.set(100);
+        result.current.produce(() => 100, true);
     });
 
     expect(renderTimes).toStrictEqual(2);
@@ -167,7 +167,7 @@ test('primitive: should rerender used on promise resolve second', async () => {
         act(() => resolve(200))
     }, 500))
     act(() => {
-        result.current.set(promise);
+        result.current.produce(() => promise, true);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.promised).toStrictEqual(true);
@@ -196,7 +196,7 @@ test('primitive: should rerender used on promise resolved', async () => {
 
     const promise = Promise.resolve(100)
     act(() => {
-        result.current.set(promise);
+        result.current.produce(() => promise);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.promised).toStrictEqual(true);
@@ -227,7 +227,7 @@ test('primitive: should rerender used on promise reject', async () => {
         act(() => reject('some error promise'))
     }, 500))
     act(() => {
-        result.current.set(promise);
+        result.current.produce(() => promise);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.promised).toStrictEqual(true);
@@ -261,7 +261,7 @@ test('primitive: should rerender used on promise rejected', async () => {
 
     const promise = Promise.reject('some error rejected')
     act(() => {
-        result.current.set(promise);
+        result.current.produce(() => promise);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.promised).toStrictEqual(true);
@@ -392,9 +392,9 @@ test('primitive: should set after promise reject', async () => {
     expect(result.current.promised).toStrictEqual(false);
     expect(result.current.error).toEqual('some error init global');
     expect(() => result.current.get()).toThrow('some error init global');
-    
+
     act(() => {
-        result.current.set(5)
+        result.current.produce(() => 5, true)
     })
     expect(renderTimes).toStrictEqual(3);
     expect(result.current.promised).toStrictEqual(false);

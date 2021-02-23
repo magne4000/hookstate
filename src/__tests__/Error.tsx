@@ -13,7 +13,7 @@ test('error: should not allow set to another state value', async () => {
     });
 
     expect(() => {
-        state2.result.current.prop2.set(p => state1.result.current.get().prop1);
+        state2.result.current.prop2.produce(p => state1.result.current.get().prop1);
     // tslint:disable-next-line: max-line-length
     }).toThrow(`Error: HOOKSTATE-102 [path: /prop2]. See https://hookstate.js.org/docs/exceptions#hookstate-102`);
 });
@@ -54,7 +54,7 @@ test('error: should not allow serialization of statelink', async () => {
     const state1 = renderHook(() => {
         return useState({ prop1: [0, 0] })
     });
-    
+
     expect(() => JSON.stringify(state1))
     .toThrow('Error: HOOKSTATE-109 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-109')
 });

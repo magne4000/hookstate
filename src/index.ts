@@ -1,4 +1,13 @@
+import { Draft } from 'immer/dist/types/types-external';
 import React from 'react';
+import { enablePatches, Patch, Immer } from 'immer';
+
+enablePatches();
+
+const imm = new Immer({
+    autoFreeze: false,
+});
+
 
 ///
 /// EXPOTED SYMBOLS (LIBRARY INTERFACE)
@@ -23,14 +32,14 @@ export type Path = ReadonlyArray<string | number>;
 
 /**
  * Type of an argument of [StateMethods.set](#set).
- * 
+ *
  * @typeparam S Type of a value of a state
  */
 export type SetStateAction<S> = (S | Promise<S>) | ((prevState: S) => (S | Promise<S>));
 
 /**
  * Type of an argument of [StateMethods.merge](#merge).
- * 
+ *
  * @typeparam S Type of a value of a state
  */
 export type SetPartialStateAction<S> =
@@ -41,14 +50,14 @@ export type SetPartialStateAction<S> =
 
 /**
  * Type of an argument of [createState](#createstate) and [useState](#usestate).
- * 
+ *
  * @typeparam S Type of a value of a state
  */
 export type SetInitialStateAction<S> = S | Promise<S> | (() => S | Promise<S>)
 
 /**
  * Special symbol which might be returned by onPromised callback of [StateMethods.map](#map) function.
- * 
+ *
  * [Learn more...](https://hookstate.js.org/docs/asynchronous-state#executing-an-action-when-state-is-loaded)
  */
 export const postpone = Symbol('postpone')
@@ -56,14 +65,14 @@ export const postpone = Symbol('postpone')
 /**
  * Special symbol which might be used to delete properties
  * from an object calling [StateMethods.set](#set) or [StateMethods.merge](#merge).
- * 
+ *
  * [Learn more...](https://hookstate.js.org/docs/nested-state#deleting-existing-element)
  */
 export const none = Symbol('none') as StateValueAtPath;
 
 /**
  * Return type of [StateMethods.keys](#readonly-keys).
- * 
+ *
  * @typeparam S Type of a value of a state
  */
 export type InferredStateKeysType<S> =
@@ -74,7 +83,7 @@ export type InferredStateKeysType<S> =
 
 /**
  * Return type of [StateMethods.map()](#map).
- * 
+ *
  * @typeparam S Type of a value of a state
  */
 export type InferredStateOrnullType<S> =
@@ -84,9 +93,9 @@ export type InferredStateOrnullType<S> =
 /**
  * For plugin developers only.
  * An instance to manipulate the state in more controlled way.
- * 
+ *
  * @typeparam S Type of a value of a state
- * 
+ *
  * [Learn more...](https://hookstate.js.org/docs/writing-plugin)
  */
 export interface PluginStateControl<S> {
@@ -96,19 +105,13 @@ export interface PluginStateControl<S> {
     getUntracked(): S;
     /**
      * Set new state value, but do not trigger rerender.
-     * 
-     * @param newValue new value to set to a state.
+     *
+     * @param recipe state mutation callback.
      */
-    setUntracked(newValue: SetStateAction<S>): Path[];
-    /**
-     * Merge new state value, but do not trigger rerender.
-     * 
-     * @param mergeValue new partial value to merge with the current state value and set.
-     */
-    mergeUntracked(mergeValue: SetPartialStateAction<S>): Path[];
+    produceUntracked(recipe: (draft: Draft<S>) => void | S): Path[];
     /**
      * Trigger rerender for hooked states, where values at the specified paths are used.
-     * 
+     *
      * @param paths paths of the state variables to search for being used by components and rerender
      */
     rerender(paths: Path[]): void;
@@ -116,7 +119,7 @@ export interface PluginStateControl<S> {
 
 /**
  * An interface to manage a state in Hookstate.
- * 
+ *
  * @typeparam S Type of a value of a state
  */
 export interface StateMethods<S> {
@@ -171,13 +174,13 @@ export interface StateMethods<S> {
      * True if state value is not yet available (eg. equal to a promise)
      */
     readonly promised: boolean;
-    
+
     /**
      * If a state was set to a promise and the promise was rejected,
      * this property will return the error captured from the promise rejection
      */
     readonly error: StateErrorAtRoot | undefined;
-    
+
     /**
      * Unwraps and returns the underlying state value referred by
      * [path](#readonly-path) of this state instance.
@@ -185,56 +188,32 @@ export interface StateMethods<S> {
      * It returns the same result as [StateMethods.value](#readonly-value) method.
      */
     get(): S;
-    
+
     /**
-     * Sets new value for a state.
-     * If `this.path === []`,
-     * it is similar to the `setState` variable returned by `React.useState` hook.
-     * If `this.path !== []`, it sets only the segment of the state value, pointed out by the path.
-     * Unlike [merge](#merge) method, this method will not accept partial updates.
-     * Partial updates can be also done by walking the nested states and setting those.
-     *
-     * @param newValue new value to set to a state.
-     * It can be a value, a promise resolving to a value
-     * (only if [this.path](#readonly-path) is `[]`),
-     * or a function returning one of these.
-     * The function receives the current state value as an argument.
+     * Sets new value for a state with the help of Immer
      */
-    set(newValue: SetStateAction<S>): void;
-    
-    /**
-     * Similarly to [set](#set) method updates state value.
-     *
-     * - If current state value is an object, it does partial update for the object.
-     * - If state value is an array and the argument is an array too,
-     * it concatenates the current value with the value of the argument and sets it to the state.
-     * - If state value is an array and the `merge` argument is an object,
-     * it does partial update for the current array value.
-     * - If current state value is a string, it concatenates the current state
-     * value with the argument converted to string and sets the result to the state.
-     */
-    merge(newValue: SetPartialStateAction<S>): void;
-    
+    produce(recipe: (draft: Draft<S>) => void | S, allowPromised?: boolean): void;
+
     /**
      * Returns nested state by key.
      * `state.nested('myprop')` returns the same as `state.myprop` or `state['myprop']`,
      * but also works for properties, which names collide with names of state methods.
-     * 
+     *
      * [Learn more about nested states...](https://hookstate.js.org/docs/nested-state)
-     * 
+     *
      * @param key child property name or index
      */
     nested<K extends keyof S>(key: K): State<S[K]>;
-    
+
     /**
      * Runs the provided action callback with optimised re-rendering.
      * Updating state within a batch action does not trigger immediate rerendering.
      * Instead, all required rerendering is done once the batch is finished.
-     * 
+     *
      * [Learn more about batching...](https://hookstate.js.org/docs/performance-batched-updates
-     * 
+     *
      * @param action callback function to execute in a batch
-     * 
+     *
      * @param context custom user's value, which is passed to plugins
      */
     batch<R, C>(
@@ -246,25 +225,25 @@ export interface StateMethods<S> {
      * If state value is null or undefined, returns state value.
      * Otherwise, it returns this state instance but
      * with null and undefined removed from the type parameter.
-     * 
+     *
      * [Learn more...](https://hookstate.js.org/docs/nullable-state)
      */
     ornull: InferredStateOrnullType<S>;
 
     /**
      * Adds plugin to the state.
-     * 
+     *
      * [Learn more...](https://hookstate.js.org/docs/extensions-overview)
      */
     attach(plugin: () => Plugin): State<S>
-    
+
     /**
      * For plugin developers only.
      * It is a method to get the instance of the previously attached plugin.
      * If a plugin has not been attached to a state,
      * it returns an Error as the first element.
      * A plugin may trhow an error to indicate that plugin has not been attached.
-     * 
+     *
      * [Learn more...](https://hookstate.js.org/docs/writing-plugin)
      */
     attach(pluginId: symbol): [PluginCallbacks | Error, PluginStateControl<S>]
@@ -285,9 +264,9 @@ export interface StateMethodsDestroy {
 
 /**
  * Type of a result of [createState](#createstate) and [useState](#usestate) functions
- * 
+ *
  * @typeparam S Type of a value of a state
- * 
+ *
  * [Learn more about global states...](https://hookstate.js.org/docs/global-state)
  * [Learn more about local states...](https://hookstate.js.org/docs/local-state)
  * [Learn more about nested states...](https://hookstate.js.org/docs/nested-state)
@@ -342,7 +321,7 @@ export interface PluginCallbacksOnSetArgument {
     readonly state?: StateValueAtRoot,
     readonly previous?: StateValueAtPath,
     readonly value?: StateValueAtPath,
-    readonly merged?: StateValueAtPath,
+    readonly patches?: Patch[],
 }
 
 /**
@@ -366,7 +345,7 @@ export interface PluginCallbacksOnBatchArgument {
 /**
  * For plugin developers only.
  * Set of callbacks, a plugin may subscribe to.
- * 
+ *
  * [Learn more...](https://hookstate.js.org/docs/writing-plugin)
  */
 export interface PluginCallbacks {
@@ -379,7 +358,7 @@ export interface PluginCallbacks {
 /**
  * For plugin developers only.
  * Hookstate plugin specification and factory method.
- * 
+ *
  * [Learn more...](https://hookstate.js.org/docs/writing-plugin)
  */
 export interface Plugin {
@@ -558,7 +537,7 @@ export function useHookstate<S>(
             // https://github.com/apollographql/apollo-client/issues/5870#issuecomment-689098185
             const isEffectExecutedAfterRender = React.useRef(false);
             isEffectExecutedAfterRender.current = false; // not yet...
-            
+
             React.useEffect(() => {
                 isEffectExecutedAfterRender.current = true; // ... and now, yes!
                 // The state is not destroyed intentionally
@@ -582,7 +561,7 @@ export function useHookstate<S>(
  * particularly usefull for creating *scoped* states.
  *
  * [Learn more...](https://hookstate.js.org/docs/using-without-statehook)
- * 
+ *
  * @typeparam S Type of a value of a state
  */
 export function StateFragment<S>(
@@ -594,9 +573,9 @@ export function StateFragment<S>(
 /**
  * Allows to use a state without defining a functional react component.
  * See more at [StateFragment](#statefragment)
- * 
+ *
  * [Learn more...](https://hookstate.js.org/docs/using-without-statehook)
- * 
+ *
  * @typeparam S Type of a value of a state
  */
 export function StateFragment<S>(
@@ -618,7 +597,7 @@ export function StateFragment<S>(
 /**
  * A plugin which allows to opt-out from usage of Javascript proxies for
  * state usage tracking. It is useful for performance tuning.
- * 
+ *
  * [Learn more...](https://hookstate.js.org/docs/performance-managed-rendering#downgraded-plugin)
  */
 export function Downgraded(): Plugin { // tslint:disable-line: function-name
@@ -657,13 +636,13 @@ export interface DevToolsExtensions {
  * You can activate development tools from `@hookstate/devtools`package,
  * for example. If no development tools are activated,
  * it returns an instance of dummy tools, which do nothing, when called.
- * 
+ *
  * [Learn more...](https://hookstate.js.org/docs/devtools)
- * 
+ *
  * @param state A state to relate to the extension.
- * 
+ *
  * @returns Interface to interact with the development tools for a given state.
- * 
+ *
  * @typeparam S Type of a value of a state
  */
 export function DevTools<S>(state: State<S>): DevToolsExtensions {
@@ -825,7 +804,7 @@ class Store implements Subscribable {
         return result;
     }
 
-    set(path: Path, value: StateValueAtPath, mergeValue: Partial<StateValueAtPath> | undefined): Path {
+    set(path: Path, value: StateValueAtPath, patches: Patch[] | undefined): Path {
         if (this._edition < 0) {
             throw new StateInvalidUsageError(path, ErrorId.SetStateWhenDestroyed)
         }
@@ -838,7 +817,7 @@ class Store implements Subscribable {
                 state: value,
                 value: value,
                 previous: this._value,
-                merged: mergeValue
+                patches: patches
             }
             if (value === none) {
                 this._promised = this.createPromised(undefined)
@@ -888,7 +867,7 @@ class Store implements Subscribable {
                     state: this._value,
                     value: value,
                     previous: prevValue,
-                    merged: mergeValue
+                    patches: patches
                 })
 
                 return path;
@@ -904,7 +883,7 @@ class Store implements Subscribable {
                     path: path,
                     state: this._value,
                     previous: prevValue,
-                    merged: mergeValue
+                    patches: patches
                 })
 
                 // if an array of object is about to loose existing property
@@ -921,7 +900,7 @@ class Store implements Subscribable {
                 path: path,
                 state: this._value,
                 value: value,
-                merged: mergeValue
+                patches: patches
             })
 
             // if an array of object is about to be extended by new property
@@ -1096,7 +1075,7 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
     private childrenCache: Record<string | number, StateMethodsImpl<StateValueAtPath>> | undefined;
     private selfCache: State<S> | undefined;
     private valueCache: StateValueAtPath = ValueUnusedMarker;
-    
+
     constructor(
         public readonly state: Store,
         public readonly path: Path,
@@ -1162,86 +1141,51 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
         return this.get()
     }
 
-    setUntracked(newValue: SetStateAction<S>, mergeValue?: Partial<StateValueAtPath>): [Path] {
-        if (typeof newValue === 'function') {
-            newValue = (newValue as ((prevValue: S) => S))(this.getUntracked());
+    produceUntracked(recipe: (draft: Draft<S>) => void | S, allowPromised?: boolean) {
+        const changes: Patch[] = [];
+        let state: S;
+        let newState: S;
+        try {
+            state = this.getUntracked(allowPromised);
+        } catch (e) {
+            if (e instanceof StateInvalidUsageError) {
+                throw new StateInvalidUsageError(this.path, ErrorId.SetStateWhenPromised)
+            }
+            throw e;
         }
-        if (typeof newValue === 'object' && newValue !== null && newValue[SelfMethodsID]) {
+        if (Array.isArray(state) || (typeof state === 'object' && state !== null)) {
+            newState = imm.produce(state, recipe, (patches: Patch[]) => {
+                changes.push(...patches);
+            });
+        } else {
+            // TODO move to dedicated set method
+            const ret = recipe(state as Draft<S>);
+            if (ret !== undefined) {
+                newState = ret;
+            } else {
+                newState = state;
+            }
+            changes.push({
+                op: 'replace',
+                path: [...this.path],
+                value: newState
+            });
+        }
+
+        if (typeof newState === 'object' && newState !== null && newState[SelfMethodsID]) {
             throw new StateInvalidUsageError(this.path, ErrorId.SetStateToValueFromState)
         }
-        return [this.state.set(this.path, newValue, mergeValue)];
+        return [this.state.set(this.path, newState, changes)];
     }
 
-    set(newValue: SetStateAction<S>) {
-        this.state.update(this.setUntracked(newValue));
-    }
-
-    mergeUntracked(sourceValue: SetPartialStateAction<S>): Path[] {
-        const currentValue = this.getUntracked()
-        if (typeof sourceValue === 'function') {
-            sourceValue = (sourceValue as Function)(currentValue);
-        }
-
-        let updatedPaths: [Path];
-        let deletedOrInsertedProps = false
-
-        if (Array.isArray(currentValue)) {
-            if (Array.isArray(sourceValue)) {
-                return this.setUntracked(currentValue.concat(sourceValue) as unknown as S, sourceValue)
-            } else {
-                const deletedIndexes: number[] = []
-                Object.keys(sourceValue).sort().forEach(i => {
-                    const index = Number(i);
-                    const newPropValue = sourceValue[index]
-                    if (newPropValue === none) {
-                        deletedOrInsertedProps = true
-                        deletedIndexes.push(index)
-                    } else {
-                        deletedOrInsertedProps = deletedOrInsertedProps || !(index in currentValue);
-                        (currentValue as StateValueAtPath[])[index] = newPropValue
-                    }
-                });
-                // indexes are ascending sorted as per above
-                // so, delete one by one from the end
-                // this way index positions do not change
-                deletedIndexes.reverse().forEach(p => {
-                    (currentValue as unknown as []).splice(p, 1)
-                })
-                updatedPaths = this.setUntracked(currentValue, sourceValue)
-            }
-        } else if (typeof currentValue === 'object' && currentValue !== null) {
-            Object.keys(sourceValue).forEach(key => {
-                const newPropValue = sourceValue[key]
-                if (newPropValue === none) {
-                    deletedOrInsertedProps = true
-                    delete currentValue[key]
-                } else {
-                    deletedOrInsertedProps = deletedOrInsertedProps || !(key in currentValue)
-                    currentValue[key] = newPropValue
-                }
-            })
-            updatedPaths = this.setUntracked(currentValue, sourceValue)
-        } else if (typeof currentValue === 'string') {
-            return this.setUntracked((currentValue + String(sourceValue)) as unknown as S, sourceValue)
-        } else {
-            return this.setUntracked(sourceValue as S)
-        }
-
-        if (updatedPaths.length !== 1 || updatedPaths[0] !== this.path || deletedOrInsertedProps) {
-            return updatedPaths
-        }
-        const updatedPath = updatedPaths[0]
-        return Object.keys(sourceValue).map(p => updatedPath.slice().concat(p))
-    }
-
-    merge(sourceValue: SetPartialStateAction<S>) {
-        this.state.update(this.mergeUntracked(sourceValue));
+    produce(recipe: (draft: Draft<S>) => void | S, allowPromised?: boolean) {
+        this.state.update(this.produceUntracked(recipe, allowPromised));
     }
 
     nested<K extends keyof S>(key: K): State<S[K]> {
         return this.child(key as string | number).self as State<S[K]>
     }
-    
+
     rerender(paths: Path[]) {
         this.state.update(paths)
     }
@@ -1260,7 +1204,7 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
     unsubscribe(l: Subscriber) {
         this.subscribers!.delete(l);
     }
-    
+
     get isMounted(): boolean {
         return !this.onSetUsed[UnmountedMarker]
     }
@@ -1338,7 +1282,7 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
         }
         return r;
     }
-    
+
     private valueArrayImpl(currentValue: StateValueAtPath[]): S {
         if (IsNoProxy) {
             this.isDowngraded = true
@@ -1411,7 +1355,7 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
         if (this.selfCache) {
             return this.selfCache
         }
-        
+
         const getter = (_: object, key: PropertyKey) => {
             if (key === self) {
                 return this
@@ -1422,7 +1366,7 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
             if (key === 'toJSON') {
                 throw new StateInvalidUsageError(this.path, ErrorId.ToJson_State);
             }
-            
+
             switch (key) {
                 case 'path':
                     return this.path
@@ -1438,10 +1382,9 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
                     return this.error
                 case 'get':
                     return () => this.get()
-                case 'set':
-                    return (p: SetStateAction<S>) => this.set(p)
-                case 'merge':
-                    return (p: SetPartialStateAction<S>) => this.merge(p)
+                case 'produce':
+                    return (recipe: (draft: Draft<S>) => void | S, allowPromised?: boolean) =>
+                        this.produce(recipe, allowPromised)
                 case 'nested':
                     return (p: keyof S) => this.nested(p)
                 case 'batch':
@@ -1455,7 +1398,7 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
                 default:
                     // fall down
             }
-            
+
             const currentDowngraded = this.isDowngraded; // relevant for IE11 only
             const currentValue = this.get(); // IE11 marks this as downgraded
             this.isDowngraded = currentDowngraded; // relevant for IE11 only
@@ -1488,7 +1431,7 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
             }
             return this.nested(key.toString() as keyof S)
         }
-        
+
         if (IsNoProxy) {
             // minimal support for IE11
             const result = (Array.isArray(this.valueSource) ? [] : {}) as State<S>;
@@ -1511,7 +1454,7 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
             this.selfCache = result;
             return this.selfCache
         }
-        
+
         this.selfCache = proxyWrap(this.path, this.valueSource,
             () => {
                 this.get() // get latest & mark used
@@ -1524,7 +1467,7 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
             false) as unknown as State<S>;
         return this.selfCache
     }
-    
+
     get promised(): boolean {
         const currentValue = this.get(true) // marks used
         if (currentValue === none && this.state.promised && !this.state.promised.fullfilled) {
@@ -1588,7 +1531,7 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
         } else {
             return [
                 this.state.getPlugin(p) ||
-                    (new StateInvalidUsageError(this.path, ErrorId.GetUnknownPlugin, p.toString())), 
+                    (new StateInvalidUsageError(this.path, ErrorId.GetUnknownPlugin, p.toString())),
                 this
             ];
         }
@@ -1639,13 +1582,15 @@ function proxyWrap(
                 ErrorId.PreventExtensions_State :
                 ErrorId.PreventExtensions_Value)
         },
-        getOwnPropertyDescriptor: (target, p) => {
+        /*getOwnPropertyDescriptor: (target, p) => {
             const targetReal = targetGetter()
             if (targetReal === undefined || targetReal === null) {
                 return undefined;
             }
             const origin = Object.getOwnPropertyDescriptor(targetReal, p);
+            console.log({ origin, targetReal, p })
             if (origin && Array.isArray(targetReal) && p in Array.prototype) {
+                console.log('GUY')
                 return origin;
             }
             return origin && {
@@ -1654,7 +1599,7 @@ function proxyWrap(
                 get: () => propertyGetter(targetReal, p),
                 set: undefined
             };
-        },
+        },*/
         has: (target, p) => {
             if (typeof p === 'symbol') {
                 return false;

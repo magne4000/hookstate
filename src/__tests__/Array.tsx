@@ -12,7 +12,7 @@ test('array: should rerender used', async () => {
     expect(result.current.get()[0]).toStrictEqual(0);
 
     act(() => {
-        result.current[0].set(p => p + 1);
+        result.current[0].produce(p => p + 1);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.get()[0]).toStrictEqual(1);
@@ -32,7 +32,7 @@ test('array: should rerender used (length)', async () => {
     expect(result.current.length).toStrictEqual(2);
 
     act(() => {
-        result.current.set([1, 5]);
+        result.current.produce(() => [1, 5]);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.get()[0]).toStrictEqual(1);
@@ -52,12 +52,12 @@ test('array: should rerender used (iterated)', async () => {
     expect(result.current.find(i => false)).toStrictEqual(undefined);
 
     act(() => {
-        result.current[0].set(2);
+        result.current[0].produce(() => 2);
     });
     expect(renderTimes).toStrictEqual(1);
 
     act(() => {
-        result.current[2].set(4);
+        result.current[2].produce(() => 4);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.get()[0]).toStrictEqual(2);
@@ -76,7 +76,7 @@ test('array: should not rerender used length unchanged', async () => {
 
     expect(result.current.get().length).toStrictEqual(2);
     act(() => {
-        result.current[0].set(p => p + 1);
+        result.current[0].produce(p => p + 1);
     });
     expect(renderTimes).toStrictEqual(1);
     expect(result.current.get()[0]).toStrictEqual(1);
@@ -96,7 +96,7 @@ test('array: should rerender used length changed', async () => {
 
     expect(result.current.get().length).toStrictEqual(2);
     act(() => {
-        result.current[2].set(p => 2);
+        result.current[2].produce(p => 2);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.get()[0]).toStrictEqual(0);
@@ -121,13 +121,13 @@ test('array: should rerender when keys used', async () => {
     expect(result.current.keys).toEqual([0, 1]);
 
     act(() => {
-        result.current[0].set(p => p);
+        result.current[0].produce(p => p);
     });
     expect(renderTimes).toStrictEqual(1);
     expect(result.current.keys).toEqual([0, 1]);
 
     act(() => {
-        result.current[3].set(3);
+        result.current[3].produce(() => 3);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.keys).toEqual([0, 1, 3]);
@@ -146,9 +146,9 @@ test('array: should not rerender used undefined properties', async () => {
     // tslint:disable-next-line: no-string-literal
     expect(result.current.get()['field']).toEqual(undefined)
     expect(result.current.get()[2]).toEqual(undefined)
-    
+
     act(() => {
-        result.current[0].set(1);
+        result.current[0].produce(() => 1);
     });
     expect(renderTimes).toStrictEqual(1);
     expect(result.current.get()[0]).toStrictEqual(1);
@@ -176,7 +176,7 @@ test('array: should not rerender used symbol properties', async () => {
     expect(result.current.get().length).toStrictEqual(2);
     expect(result.current.get()[TestSymbol]).toEqual(undefined)
     expect(result.current[TestSymbol]).toEqual(undefined)
-    
+
     result.current.get()[TestSymbol] = 100
 
     expect(() => { result.current.get()[0] = 100 })
@@ -205,7 +205,7 @@ test('array: should rerender used via nested', async () => {
     expect(result.current[0].get()).toStrictEqual(0);
 
     act(() => {
-        result.current[0].set(p => p + 1);
+        result.current[0].produce(p => p + 1);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current[0].get()).toStrictEqual(1);
@@ -225,7 +225,7 @@ test('array: should rerender used when set to the same', async () => {
     expect(result.current.get()).toEqual([0, 5]);
 
     act(() => {
-        result.current.set(p => p);
+        result.current.produce(p => p);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.get()).toEqual([0, 5]);
@@ -243,7 +243,7 @@ test('array: should rerender unused when new element', async () => {
     });
 
     act(() => {
-        result.current[2].set(1);
+        result.current[2].produce(() => 1);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.get()[0]).toStrictEqual(0);
@@ -264,7 +264,7 @@ test('array: should not rerender unused property', async () => {
     expect(result.current.get()[1]).toStrictEqual(0);
 
     act(() => {
-        result.current[0].set(p => p + 1);
+        result.current[0].produce(p => p + 1);
     });
     expect(renderTimes).toStrictEqual(1);
     expect(result.current.get()[0]).toStrictEqual(1);
@@ -282,7 +282,7 @@ test('array: should not rerender unused self', async () => {
     });
 
     act(() => {
-        result.current[0].set(p => p + 1);
+        result.current[0].produce(p => p + 1);
     });
     expect(renderTimes).toStrictEqual(1);
     expect(result.current.get()[0]).toStrictEqual(1);

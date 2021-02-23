@@ -26,7 +26,7 @@ test('object: should rerender used via scoped updates by child', async () => {
     expect(childRenderTimes).toStrictEqual(1);
 
     act(() => {
-        child.result.current.fieldUsedByChild.set(p => p + 1);
+        child.result.current.fieldUsedByChild.produce(p => p + 1);
     });
     expect(parent.result.current.fieldUsedByParent.get()).toStrictEqual(0);
     expect(parent.result.current.fieldUsedByBoth.get()).toStrictEqual(200);
@@ -36,7 +36,7 @@ test('object: should rerender used via scoped updates by child', async () => {
     expect(childRenderTimes).toStrictEqual(2);
 
     act(() => {
-        child.result.current.fieldUsedByParent.set(p => p + 1);
+        child.result.current.fieldUsedByParent.produce(p => p + 1);
     });
     expect(parent.result.current.fieldUsedByParent.get()).toStrictEqual(1);
     expect(parent.result.current.fieldUsedByBoth.get()).toStrictEqual(200);
@@ -46,7 +46,7 @@ test('object: should rerender used via scoped updates by child', async () => {
     expect(childRenderTimes).toStrictEqual(2);
 
     act(() => {
-        child.result.current.fieldUsedByBoth.set(p => p + 1);
+        child.result.current.fieldUsedByBoth.produce(p => p + 1);
     });
     expect(parent.result.current.fieldUsedByParent.get()).toStrictEqual(1);
     expect(parent.result.current.fieldUsedByBoth.get()).toStrictEqual(201);
@@ -81,7 +81,7 @@ test('object: should rerender used via scoped updates by parent', async () => {
     expect(childRenderTimes).toStrictEqual(1);
 
     act(() => {
-        parent.result.current.fieldUsedByChild.set(p => p + 1);
+        parent.result.current.fieldUsedByChild.produce(p => p + 1);
     });
     expect(parent.result.current.fieldUsedByParent.get()).toStrictEqual(0);
     expect(parent.result.current.fieldUsedByBoth.get()).toStrictEqual(200);
@@ -91,7 +91,7 @@ test('object: should rerender used via scoped updates by parent', async () => {
     expect(childRenderTimes).toStrictEqual(2);
 
     act(() => {
-        parent.result.current.fieldUsedByParent.set(p => p + 1);
+        parent.result.current.fieldUsedByParent.produce(p => p + 1);
     });
     expect(parent.result.current.fieldUsedByParent.get()).toStrictEqual(1);
     expect(parent.result.current.fieldUsedByBoth.get()).toStrictEqual(200);
@@ -101,7 +101,7 @@ test('object: should rerender used via scoped updates by parent', async () => {
     expect(childRenderTimes).toStrictEqual(2);
 
     act(() => {
-        parent.result.current.fieldUsedByBoth.set(p => p + 1);
+        parent.result.current.fieldUsedByBoth.produce(p => p + 1);
     });
     expect(parent.result.current.fieldUsedByParent.get()).toStrictEqual(1);
     expect(parent.result.current.fieldUsedByBoth.get()).toStrictEqual(201);
@@ -136,7 +136,7 @@ test('object: should rerender used via scoped updates by parent (disabled tracki
     expect(childRenderTimes).toStrictEqual(1);
 
     act(() => {
-        parent.result.current.fieldUsedByChild.set(p => p + 1);
+        parent.result.current.fieldUsedByChild.produce(p => p + 1);
     });
     expect(parent.result.current.fieldUsedByParent.get()).toStrictEqual(0);
     expect(parent.result.current.fieldUsedByBoth.get()).toStrictEqual(200);
@@ -146,7 +146,7 @@ test('object: should rerender used via scoped updates by parent (disabled tracki
     expect(childRenderTimes).toStrictEqual(1);
 
     act(() => {
-        parent.result.current.fieldUsedByParent.set(p => p + 1);
+        parent.result.current.fieldUsedByParent.produce(p => p + 1);
     });
     expect(parent.result.current.fieldUsedByParent.get()).toStrictEqual(1);
     expect(parent.result.current.fieldUsedByBoth.get()).toStrictEqual(200);
@@ -156,7 +156,7 @@ test('object: should rerender used via scoped updates by parent (disabled tracki
     expect(childRenderTimes).toStrictEqual(1);
 
     act(() => {
-        parent.result.current.fieldUsedByBoth.set(p => p + 1);
+        parent.result.current.fieldUsedByBoth.produce(p => p + 1);
     });
     expect(parent.result.current.fieldUsedByParent.get()).toStrictEqual(1);
     expect(parent.result.current.fieldUsedByBoth.get()).toStrictEqual(201);
@@ -188,7 +188,7 @@ test('object: should support late disabled tracking', async () => {
     expect(childRenderTimes).toStrictEqual(1);
 
     act(() => {
-        parent.result.current.field.set(p => p + 1);
+        parent.result.current.field.produce(p => p + 1);
     });
     expect(parent.result.current.field.get()).toStrictEqual(1);
     expect(child.result.current.field.get()).toStrictEqual(1);

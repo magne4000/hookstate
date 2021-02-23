@@ -16,7 +16,7 @@ test('object: should rerender used', async () => {
     expect(result.current.get().field1).toStrictEqual(0);
 
     act(() => {
-        result.current.field1.set(p => p + 1);
+        result.current.field1.produce(p => p + 1);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.get().field1).toStrictEqual(1);
@@ -26,7 +26,7 @@ test('object: should rerender used', async () => {
 
 test('object: should rerender used null', async () => {
     let renderTimes = 0
-    
+
     const state = createState<{ field: string } | null>(null)
     const { result } = renderHook(() => {
         renderTimes += 1;
@@ -36,7 +36,7 @@ test('object: should rerender used null', async () => {
     expect(result.current.value?.field).toStrictEqual(undefined);
 
     act(() => {
-        state.set({ field: 'a' });
+        state.produce(() => ({ field: 'a' }));
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.get()?.field).toStrictEqual('a');
@@ -45,7 +45,7 @@ test('object: should rerender used null', async () => {
 
 test('object: should rerender used property-hiphen', async () => {
     let renderTimes = 0
-    
+
     const state = createState<{ 'hiphen-property': string }>({ 'hiphen-property': 'value' })
     const { result } = renderHook(() => {
         renderTimes += 1;
@@ -55,7 +55,7 @@ test('object: should rerender used property-hiphen', async () => {
     expect(result.current.value['hiphen-property']).toStrictEqual('value');
 
     act(() => {
-        state['hiphen-property'].set('updated');
+        state['hiphen-property'].produce(() => 'updated');
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current['hiphen-property'].get()).toStrictEqual('updated');
@@ -75,7 +75,7 @@ test('object: should rerender used (boolean-direct)', async () => {
     expect(result.current.get().field1).toStrictEqual(true);
 
     act(() => {
-        result.current.field1.set(p => !p);
+        result.current.field1.produce(p => !p);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.get().field1).toStrictEqual(false);
@@ -96,7 +96,7 @@ test('object: should rerender used via nested', async () => {
     expect(result.current.field1.get()).toStrictEqual(0);
 
     act(() => {
-        result.current.field1.set(p => p + 1);
+        result.current.field1.produce(p => p + 1);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.field1.get()).toStrictEqual(1);
@@ -120,10 +120,10 @@ test('object: should not rerender used symbol properties', async () => {
     expect(TestSymbol in result.current).toEqual(false)
     expect(result.current.get()[TestSymbol]).toEqual(undefined)
     expect(result.current[TestSymbol]).toEqual(undefined)
-    
+
     expect(() => { result.current.get().field1 = 100 })
     .toThrow('Error: HOOKSTATE-202 [path: /]. See https://hookstate.js.org/docs/exceptions#hookstate-202')
-    
+
     result.current.get()[TestSymbol] = 100
 
     expect(renderTimes).toStrictEqual(1);
@@ -147,7 +147,7 @@ test('object: should rerender used when set to the same', async () => {
     expect(result.current.get()).toEqual({ field: 1 });
 
     act(() => {
-        result.current.set(p => p);
+        result.current.produce(p => p);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.get()).toEqual({ field: 1 });
@@ -167,19 +167,19 @@ test('object: should rerender when keys used', async () => {
     expect(result.current.keys).toEqual(['field']);
 
     act(() => {
-        result.current.ornull!.field.set(p => p);
+        result.current.ornull!.field.produce(p => p);
     });
     expect(renderTimes).toStrictEqual(1);
     expect(result.current.keys).toEqual(['field']);
 
     act(() => {
-        result.current.ornull!.optional.set(2);
+        result.current.ornull!.optional.produce(() => 2);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.keys).toEqual(['field', 'optional']);
 
     act(() => {
-        result.current.set(null);
+        result.current.produce(() => null);
     });
     expect(renderTimes).toStrictEqual(3);
     expect(result.current.keys).toEqual(undefined);
@@ -198,7 +198,7 @@ test('object: should rerender unused when new element', async () => {
 
     act(() => {
         // tslint:disable-next-line: no-string-literal
-        result.current['field3'].set(1);
+        result.current['field3'].produce(() => 1);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.get()).toEqual({
@@ -224,9 +224,9 @@ test('object: should not rerender unused property', async () => {
         })
     });
     expect(renderTimes).toStrictEqual(1);
-    
+
     act(() => {
-        result.current.field1.set(p => p + 1);
+        result.current.field1.produce(p => p + 1);
     });
     expect(renderTimes).toStrictEqual(1);
     expect(result.current.get().field1).toStrictEqual(1);
@@ -243,7 +243,7 @@ test('object: should not rerender unused self', async () => {
     });
 
     act(() => {
-        result.current.field1.set(2);
+        result.current.field1.produce(() => 2);
     });
     expect(renderTimes).toStrictEqual(1);
     expect(result.current.get().field1).toStrictEqual(2);
@@ -261,38 +261,38 @@ test('object: should delete property when set to none', async () => {
     });
     expect(renderTimes).toStrictEqual(1);
     expect(result.current.get().field1).toStrictEqual(0);
-    
+
     act(() => {
         // deleting existing property
-        result.current.field1.set(none);
+        result.current.field1.produce(() => none);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.get()).toEqual({ field2: 'str', field3: true });
 
     act(() => {
         // deleting non existing property
-        result.current.field1.set(none);
+        result.current.field1.produce(() => none);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.get()).toEqual({ field2: 'str', field3: true });
-    
+
     act(() => {
         // inserting property
-        result.current.field1.set(1);
+        result.current.field1.produce(() => 1);
     });
     expect(renderTimes).toStrictEqual(3);
     expect(result.current.get().field1).toEqual(1);
 
     act(() => {
         // deleting existing but not used in render property
-        result.current.field2.set(none);
+        result.current.field2.produce(() => none);
     });
     expect(renderTimes).toStrictEqual(4);
     expect(result.current.get()).toEqual({ field1: 1, field3: true });
 
     // deleting root value makes it promised
     act(() => {
-        result.current.set(none)
+        result.current.produce(() => none)
     })
     expect(result.current.promised).toEqual(true)
     expect(renderTimes).toStrictEqual(5);
@@ -313,7 +313,7 @@ test('object: should auto save latest state for unmounted', async () => {
     expect(result.current.get().field1).toStrictEqual(0);
 
     act(() => {
-        result.current.field1.set(2);
+        result.current.field1.produce(() => 2);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(unmountedLink.field1.get()).toStrictEqual(2);
@@ -329,8 +329,8 @@ test('object: should set to null', async () => {
 
     const _unused = result.current.get()
     act(() => {
-        result.current.set(p => null);
-        result.current.set(null);
+        result.current.produce(p => null);
+        result.current.produce(() => null);
     });
     expect(renderTimes).toStrictEqual(2);
 });
@@ -345,8 +345,8 @@ test('object: should denull', async () => {
     const state = result.current.ornull
     expect(state ? state.get() : null).toEqual({})
     act(() => {
-        result.current.set(p => null);
-        result.current.set(null);
+        result.current.produce(p => null);
+        result.current.produce(() => null);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.ornull).toEqual(null)
@@ -362,7 +362,7 @@ test('object: should return nested state with conflict name', async () => {
     expect(result.current.nested('value').value).toEqual(0)
     expect(result.current.value.value).toEqual(0)
     act(() => {
-        result.current.nested('value').set(p => p + 1);
+        result.current.nested('value').produce(p => p + 1);
     });
     expect(renderTimes).toStrictEqual(2);
     expect(result.current.nested('value').value).toEqual(1)
