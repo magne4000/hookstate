@@ -659,7 +659,7 @@ var StateMethodsImpl = /** @class */ (function () {
         this.state.update(this.produceUntracked(recipe, allowPromised));
     };
     StateMethodsImpl.prototype.applyPatchesUntracked = function (patches) {
-        var newState = st(this.getUntracked(), patches);
+        var newState = imm.applyPatches(this.getUntracked(), patches);
         return [this.state.set(this.path, newState, patches)];
     };
     StateMethodsImpl.prototype.applyPatches = function (patches) {
