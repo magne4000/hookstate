@@ -201,7 +201,7 @@ test('complex: should auto save latest state for unmounted', async () => {
     expect(result.current[0].get().field1).toStrictEqual(2);
 });
 
-test('complex: setting gull state', () => {
+test('complex: apply patches', () => {
     const state = createState({
         a: 1,
         b: {
@@ -212,14 +212,9 @@ test('complex: setting gull state', () => {
         }
     });
 
-    state.produce(p => {
-        Object.assign(p, {});
-    });
-
-    state.b.produce(p => {
-        p.c = 3
-        p.d.e = 6;
-    });
+    state.applyPatches([
+        { op: 'replace', value: 6, path: ['b', 'd', 'e'] }
+    ])
 
     expect(state.b.d.e.get()).toStrictEqual(6);
 })

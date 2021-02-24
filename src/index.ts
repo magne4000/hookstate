@@ -1,6 +1,6 @@
 import { Draft } from 'immer/dist/types/types-external';
 import React from 'react';
-import { enablePatches, Patch, Immer, applyPatches } from 'immer';
+import { enablePatches, Patch, Immer } from 'immer';
 
 enablePatches();
 
@@ -1201,7 +1201,7 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
     }
 
     applyPatchesUntracked(patches: Patch[]) {
-        const newState = applyPatches(this.getUntracked(), patches);
+        const newState = imm.applyPatches(this.getUntracked(), patches);
         return [this.state.set(this.path, newState, patches)];
     }
 
