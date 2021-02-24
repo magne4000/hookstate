@@ -63,7 +63,7 @@ test('plugin: common flow callbacks', async () => {
         result.current[0].f1.produce(p => p + 1);
     });
     expect(renderTimes).toStrictEqual(3);
-    expect(messages.slice(2)).toEqual(['onSet called, [0,f1]: [{\"f1\":1,\"f2\":\"str2\"}], 0 => 1, [{\"op\":\"replace\",\"path\":[0,\"f1\"],\"value\":1}]'])
+    expect(messages.slice(2)).toEqual(['onSet called, [0,f1]: [{\"f1\":1,\"f2\":\"str2\"}], 0 => 1, [{\"op\":\"replace\",\"path\":[],\"value\":1}]'])
 
     expect(result.current.get()[0].f1).toStrictEqual(1);
     expect(Object.keys(result.current[0])).toEqual(['f1', 'f2']);
@@ -109,7 +109,7 @@ test('plugin: common flow callbacks', async () => {
     })
     expect(renderTimes).toStrictEqual(4);
     expect(messages.slice(9)).toEqual(
-        ['onSet called, [0,f2]: [{"f1":0,"f2":"str3str2"}], "str3" => "str3str2", [{\"op\":\"replace\",\"path\":[0,\"f2\"],\"value\":\"str3str2\"}]']);
+        ['onSet called, [0,f2]: [{"f1":0,"f2":"str3str2"}], "str3" => "str3str2", [{\"op\":\"replace\",\"path\":[],\"value\":\"str3str2\"}]']);
 
     expect(result.current.get()[0].f1).toStrictEqual(0);
     expect(result.current.get()[0].f2).toStrictEqual('str3str2');
@@ -211,7 +211,7 @@ test('plugin: common flow callbacks global state', async () => {
         result.current[0].f1.produce(p => p + 1);
     });
     expect(renderTimes).toStrictEqual(2);
-    expect(messages.slice(1)).toEqual(['onSet called, [0,f1]: [{\"f1\":1,\"f2\":\"str\"}], 0 => 1, [{\"op\":\"replace\",\"path\":[0,\"f1\"],\"value\":1}]'])
+    expect(messages.slice(1)).toEqual(['onSet called, [0,f1]: [{\"f1\":1,\"f2\":\"str\"}], 0 => 1, [{\"op\":\"replace\",\"path\":[],\"value\":1}]'])
 
     expect(result.current.get()[0].f1).toStrictEqual(1);
     expect(Object.keys(result.current[0])).toEqual(['f1', 'f2']);
@@ -244,7 +244,7 @@ test('plugin: common flow callbacks global state', async () => {
         result.current[0].f1.produce(p => p + 1)
     });
     expect(renderTimes).toStrictEqual(3);
-    expect(messages.slice(4)).toEqual(['onSet called, [0,f1]: [{\"f1\":3,\"f2\":\"str\"}], 2 => 3, [{\"op\":\"replace\",\"path\":[0,\"f1\"],\"value\":3}]'])
+    expect(messages.slice(4)).toEqual(['onSet called, [0,f1]: [{\"f1\":3,\"f2\":\"str\"}], 2 => 3, [{\"op\":\"replace\",\"path\":[],\"value\":3}]'])
 
     stateInf.destroy()
     expect(messages.slice(5)).toEqual(['onDestroy called, [{\"f1\":3,\"f2\":\"str\"}]'])
@@ -302,7 +302,7 @@ test('plugin: common flow callbacks devtools', async () => {
             result.current[0].f1.produce(p => p + 1);
         });
         expect(renderTimes).toStrictEqual(2);
-        expect(messages.slice(1)).toEqual(['LABELLED onSet called, [0,f1]: [{\"f1\":1,\"f2\":\"str\"}], 0 => 1, [{\"op\":\"replace\",\"path\":[0,\"f1\"],\"value\":1}]'])
+        expect(messages.slice(1)).toEqual(['LABELLED onSet called, [0,f1]: [{\"f1\":1,\"f2\":\"str\"}], 0 => 1, [{\"op\":\"replace\",\"path\":[],\"value\":1}]'])
 
         expect(result.current.get()[0].f1).toStrictEqual(1);
         expect(Object.keys(result.current[0])).toEqual(['f1', 'f2']);
@@ -390,7 +390,7 @@ test('plugin: common flow callbacks global state devtools', async () => {
             result.current[0].f1.produce(p => p + 1);
         });
         expect(renderTimes).toStrictEqual(2);
-        expect(messages.slice(1)).toEqual(['onSet called, [0,f1]: [{\"f1\":1,\"f2\":\"str\"}], 0 => 1, [{\"op\":\"replace\",\"path\":[0,\"f1\"],\"value\":1}]'])
+        expect(messages.slice(1)).toEqual(['onSet called, [0,f1]: [{\"f1\":1,\"f2\":\"str\"}], 0 => 1, [{\"op\":\"replace\",\"path\":[],\"value\":1}]'])
 
         expect(result.current.get()[0].f1).toStrictEqual(1);
         expect(Object.keys(result.current[0])).toEqual(['f1', 'f2']);
@@ -427,7 +427,7 @@ test('plugin: common flow callbacks global state devtools', async () => {
             result.current[0].f1.produce(p => p + 1)
         });
         expect(renderTimes).toStrictEqual(3);
-        expect(messages.slice(5)).toEqual(['onSet called, [0,f1]: [{\"f1\":3,\"f2\":\"str\"}], 2 => 3, [{\"op\":\"replace\",\"path\":[0,\"f1\"],\"value\":3}]'])
+        expect(messages.slice(5)).toEqual(['onSet called, [0,f1]: [{\"f1\":3,\"f2\":\"str\"}], 2 => 3, [{\"op\":\"replace\",\"path\":[],\"value\":3}]'])
 
         stateRef.destroy()
         expect(messages.slice(6)).toEqual(['onDestroy called, [{\"f1\":3,\"f2\":\"str\"}]'])

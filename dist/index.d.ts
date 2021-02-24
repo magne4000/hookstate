@@ -1,4 +1,6 @@
+import { Draft } from 'immer/dist/types/types-external';
 import React from 'react';
+import { Patch } from 'immer';
 /**
  * 'JSON path' from root of a state object to a nested property.
  * Return type of [StateMethod.path](#readonly-path).
@@ -74,15 +76,15 @@ export interface PluginStateControl<S> {
     /**
      * Set new state value, but do not trigger rerender.
      *
-     * @param newValue new value to set to a state.
+     * @param recipe state mutation callback.
      */
-    setUntracked(newValue: SetStateAction<S>): Path[];
+    produceUntracked(recipe: (draft: Draft<S>) => void | S | Promise<S>): Path[];
     /**
-     * Merge new state value, but do not trigger rerender.
+     * Set new state value, but do not trigger rerender.
      *
-     * @param mergeValue new partial value to merge with the current state value and set.
+     * @param patches
      */
-    mergeUntracked(mergeValue: SetPartialStateAction<S>): Path[];
+    applyPatchesUntracked(patches: Patch[]): Path[];
     /**
      * Trigger rerender for hooked states, where values at the specified paths are used.
      *
@@ -157,32 +159,10 @@ export interface StateMethods<S> {
      */
     get(): S;
     /**
-     * Sets new value for a state.
-     * If `this.path === []`,
-     * it is similar to the `setState` variable returned by `React.useState` hook.
-     * If `this.path !== []`, it sets only the segment of the state value, pointed out by the path.
-     * Unlike [merge](#merge) method, this method will not accept partial updates.
-     * Partial updates can be also done by walking the nested states and setting those.
-     *
-     * @param newValue new value to set to a state.
-     * It can be a value, a promise resolving to a value
-     * (only if [this.path](#readonly-path) is `[]`),
-     * or a function returning one of these.
-     * The function receives the current state value as an argument.
+     * Sets new value for a state with the help of Immer
      */
-    set(newValue: SetStateAction<S>): void;
-    /**
-     * Similarly to [set](#set) method updates state value.
-     *
-     * - If current state value is an object, it does partial update for the object.
-     * - If state value is an array and the argument is an array too,
-     * it concatenates the current value with the value of the argument and sets it to the state.
-     * - If state value is an array and the `merge` argument is an object,
-     * it does partial update for the current array value.
-     * - If current state value is a string, it concatenates the current state
-     * value with the argument converted to string and sets the result to the state.
-     */
-    merge(newValue: SetPartialStateAction<S>): void;
+    produce(recipe: (draft: Draft<S>) => void | S | Promise<S>, allowPromised?: boolean): void;
+    applyPatches(patches: Patch[]): void;
     /**
      * Returns nested state by key.
      * `state.nested('myprop')` returns the same as `state.myprop` or `state['myprop']`,
@@ -295,7 +275,7 @@ export interface PluginCallbacksOnSetArgument {
     readonly state?: StateValueAtRoot;
     readonly previous?: StateValueAtPath;
     readonly value?: StateValueAtPath;
-    readonly merged?: StateValueAtPath;
+    readonly patches?: Patch[];
 }
 /**
  * For plugin developers only.
@@ -341,6 +321,9 @@ export interface Plugin {
      */
     readonly init?: (state: State<StateValueAtRoot>) => PluginCallbacks;
 }
+export interface Options {
+    untrackedGet?: boolean;
+}
 /**
  * Creates new state and returns it.
  *
@@ -372,7 +355,7 @@ export interface Plugin {
  * pass the created state to [useState](#usestate) function and
  * use the returned result in the component's logic.
  */
-export declare function createState<S>(initial: SetInitialStateAction<S>): State<S> & StateMethodsDestroy;
+export declare function createState<S>(initial: SetInitialStateAction<S>, options?: Partial<Options>): State<S> & StateMethodsDestroy;
 /**
  * Enables a functional React component to use a state,
  * either created by [createState](#createstate) (*global* state) or

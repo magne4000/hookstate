@@ -9,8 +9,7 @@ function Untracked($this) {
         var _a = th.attach(PluginID), _1 = _a[0], controls_1 = _a[1];
         return {
             get: function () { return controls_1.getUntracked(); },
-            set: function (v) { return controls_1.setUntracked(v); },
-            merge: function (v) { return controls_1.mergeUntracked(v); }
+            produce: function (v) { return controls_1.produceUntracked(v); },
         };
     }
     return {

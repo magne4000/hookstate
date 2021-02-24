@@ -200,3 +200,26 @@ test('complex: should auto save latest state for unmounted', async () => {
     expect(unmountedLink.field1.get()).toStrictEqual(2);
     expect(result.current[0].get().field1).toStrictEqual(2);
 });
+
+test('complex: setting gull state', () => {
+    const state = createState({
+        a: 1,
+        b: {
+            c: 2,
+            d: {
+                e: 5
+            }
+        }
+    });
+
+    state.produce(p => {
+        Object.assign(p, {});
+    });
+
+    state.b.produce(p => {
+        p.c = 3
+        p.d.e = 6;
+    });
+
+    expect(state.b.d.e.get()).toStrictEqual(6);
+})

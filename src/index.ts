@@ -1,13 +1,12 @@
 import { Draft } from 'immer/dist/types/types-external';
 import React from 'react';
-import { enablePatches, Patch, Immer } from 'immer';
+import { enablePatches, Patch, Immer, applyPatches } from 'immer';
 
 enablePatches();
 
 const imm = new Immer({
     autoFreeze: false,
 });
-
 
 ///
 /// EXPOTED SYMBOLS (LIBRARY INTERFACE)
@@ -108,7 +107,13 @@ export interface PluginStateControl<S> {
      *
      * @param recipe state mutation callback.
      */
-    produceUntracked(recipe: (draft: Draft<S>) => void | S): Path[];
+    produceUntracked(recipe: (draft: Draft<S>) => void | S | Promise<S>): Path[];
+    /**
+     * Set new state value, but do not trigger rerender.
+     *
+     * @param patches
+     */
+    applyPatchesUntracked(patches: Patch[]): Path[];
     /**
      * Trigger rerender for hooked states, where values at the specified paths are used.
      *
@@ -192,7 +197,9 @@ export interface StateMethods<S> {
     /**
      * Sets new value for a state with the help of Immer
      */
-    produce(recipe: (draft: Draft<S>) => void | S, allowPromised?: boolean): void;
+    produce(recipe: (draft: Draft<S>) => void | S | Promise<S>, allowPromised?: boolean): void;
+
+    applyPatches(patches: Patch[]): void;
 
     /**
      * Returns nested state by key.
@@ -372,6 +379,10 @@ export interface Plugin {
     readonly init?: (state: State<StateValueAtRoot>) => PluginCallbacks;
 }
 
+export interface Options {
+    untrackedGet?: boolean
+}
+
 /**
  * Creates new state and returns it.
  *
@@ -404,9 +415,10 @@ export interface Plugin {
  * use the returned result in the component's logic.
  */
 export function createState<S>(
-    initial: SetInitialStateAction<S>
+    initial: SetInitialStateAction<S>,
+    options: Partial<Options> = {},
 ): State<S> & StateMethodsDestroy {
-    const methods = createStore(initial).toMethods();
+    const methods = createStore(initial, options).toMethods();
     const devtools = createState[DevToolsID]
     if (devtools) {
         methods.attach(devtools)
@@ -746,7 +758,9 @@ class Store implements Subscribable {
     private _batchesPendingPaths?: Path[];
     private _batchesPendingActions?: (() => void)[];
 
-    constructor(private _value: StateValueAtRoot) {
+    public untrackedGet: boolean;
+
+    constructor(private _value: StateValueAtRoot, { untrackedGet = false }: Partial<Options> = {} ) {
         if (typeof _value === 'object' &&
             Promise.resolve(_value) === _value) {
             this._promised = this.createPromised(_value)
@@ -754,6 +768,7 @@ class Store implements Subscribable {
         } else if (_value === none) {
             this._promised = this.createPromised(undefined)
         }
+        this.untrackedGet = untrackedGet;
     }
 
     createPromised(newValue: StateValueAtPath | undefined) {
@@ -1123,6 +1138,9 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
 
     get(allowPromised?: boolean) {
         const currentValue = this.getUntracked(allowPromised)
+        if (this.state.untrackedGet) {
+            return currentValue;
+        }
         if (this.valueCache === ValueUnusedMarker) {
             if (this.isDowngraded) {
                 this.valueCache = currentValue;
@@ -1141,10 +1159,10 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
         return this.get()
     }
 
-    produceUntracked(recipe: (draft: Draft<S>) => void | S, allowPromised?: boolean) {
+    produceUntracked(recipe: (draft: Draft<S>) => void | S | Promise<S>, allowPromised?: boolean) {
         const changes: Patch[] = [];
         let state: S;
-        let newState: S;
+        let newState: S | Promise<S>;
         try {
             state = this.getUntracked(allowPromised);
         } catch (e) {
@@ -1158,7 +1176,7 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
                 changes.push(...patches);
             });
         } else {
-            // TODO move to dedicated set method
+            // TODO move to dedicated set method?
             const ret = recipe(state as Draft<S>);
             if (ret !== undefined) {
                 newState = ret;
@@ -1167,7 +1185,7 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
             }
             changes.push({
                 op: 'replace',
-                path: [...this.path],
+                path: [],
                 value: newState
             });
         }
@@ -1178,8 +1196,17 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
         return [this.state.set(this.path, newState, changes)];
     }
 
-    produce(recipe: (draft: Draft<S>) => void | S, allowPromised?: boolean) {
+    produce(recipe: (draft: Draft<S>) => void | S | Promise<S>, allowPromised?: boolean) {
         this.state.update(this.produceUntracked(recipe, allowPromised));
+    }
+
+    applyPatchesUntracked(patches: Patch[]) {
+        const newState = applyPatches(this.getUntracked(), patches);
+        return [this.state.set(this.path, newState, patches)];
+    }
+
+    applyPatches(patches: Patch[]) {
+        this.state.update(this.applyPatchesUntracked(patches));
     }
 
     nested<K extends keyof S>(key: K): State<S[K]> {
@@ -1383,8 +1410,10 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
                 case 'get':
                     return () => this.get()
                 case 'produce':
-                    return (recipe: (draft: Draft<S>) => void | S, allowPromised?: boolean) =>
+                    return (recipe: (draft: Draft<S>) => void | S | Promise<S>, allowPromised?: boolean) =>
                         this.produce(recipe, allowPromised)
+                case 'applyPatches':
+                    return (patches: Patch[]) => this.applyPatches(patches)
                 case 'nested':
                     return (p: keyof S) => this.nested(p)
                 case 'batch':
@@ -1436,7 +1465,7 @@ class StateMethodsImpl<S> implements StateMethods<S>, StateMethodsDestroy, Subsc
             // minimal support for IE11
             const result = (Array.isArray(this.valueSource) ? [] : {}) as State<S>;
             [self, 'toJSON', 'path', 'keys', 'value', 'ornull',
-                'promised', 'error', 'get', 'set', 'merge',
+                'promised', 'error', 'get', 'produce',
                 'nested', 'batch', 'attach', 'destroy']
             .forEach(key => {
                 Object.defineProperty(result, key, {
@@ -1582,15 +1611,13 @@ function proxyWrap(
                 ErrorId.PreventExtensions_State :
                 ErrorId.PreventExtensions_Value)
         },
-        /*getOwnPropertyDescriptor: (target, p) => {
+        getOwnPropertyDescriptor: (target, p) => {
             const targetReal = targetGetter()
             if (targetReal === undefined || targetReal === null) {
                 return undefined;
             }
             const origin = Object.getOwnPropertyDescriptor(targetReal, p);
-            console.log({ origin, targetReal, p })
             if (origin && Array.isArray(targetReal) && p in Array.prototype) {
-                console.log('GUY')
                 return origin;
             }
             return origin && {
@@ -1599,7 +1626,7 @@ function proxyWrap(
                 get: () => propertyGetter(targetReal, p),
                 set: undefined
             };
-        },*/
+        },
         has: (target, p) => {
             if (typeof p === 'symbol') {
                 return false;
@@ -1645,7 +1672,7 @@ function proxyWrap(
     });
 }
 
-function createStore<S>(initial: SetInitialStateAction<S>): Store {
+function createStore<S>(initial: SetInitialStateAction<S>, options: Partial<Options> = {}): Store {
     let initialValue: S | Promise<S> = initial as (S | Promise<S>);
     if (typeof initial === 'function') {
         initialValue = (initial as (() => S | Promise<S>))();
@@ -1653,7 +1680,7 @@ function createStore<S>(initial: SetInitialStateAction<S>): Store {
     if (typeof initialValue === 'object' && initialValue !== null && initialValue[SelfMethodsID]) {
         throw new StateInvalidUsageError(RootPath, ErrorId.InitStateToValueFromState)
     }
-    return new Store(initialValue);
+    return new Store(initialValue, options);
 }
 
 function useSubscribedStateMethods<S>(
